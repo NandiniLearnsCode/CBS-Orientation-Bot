@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "CBS_BA_Copilot"
+version = "0.1.0"
+description = "A chatbot website using Streamlit and OpenAI"
+authors = ["Tianyi Peng <tp2845@columbia.edu>"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.10"
+streamlit = "1.42.2"
+openai = "1.64.0"
+llama-index = "0.12.20"
+llama-index-llms-openai = "0.3.20"
+nltk = "3.9.1"
+pypdf = "5.3.0"
+llama-index-embeddings-huggingface = "0.5.2"
+streamlit-markdown = "^1.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
