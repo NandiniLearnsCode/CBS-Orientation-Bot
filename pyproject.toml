@@ -2,7 +2,7 @@
 name = "CBS_BA_Copilot"
 version = "0.1.0"
 description = "A chatbot website using Streamlit and OpenAI"
-authors = ["Tianyi Peng <tp2845@columbia.edu>"]
+authors = ["Nandini Srivastava <nsrivastava26@gsb.columbia.edu>"]
 readme = "README.md"
 package-mode = false
 
