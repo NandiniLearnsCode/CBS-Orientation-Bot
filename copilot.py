@@ -28,18 +28,13 @@ class Copilot:
         if not os.path.exists(pdf_path):
             raise FileNotFoundError(f"The file {pdf_path} does not exist")
 
-        # Setup models
         Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
         Settings.llm = LlamaOpenAI(model="gpt-4o")
 
-        # Load documents
         documents = SimpleDirectoryReader(input_files=[pdf_path]).load_data()
-
-        # Split using tokenizer (no nltk!)
         splitter = TokenTextSplitter(chunk_size=512, chunk_overlap=50)
         nodes = splitter.get_nodes_from_documents(documents)
 
-        # Index
         storage_context = StorageContext.from_defaults(vector_store=SimpleVectorStore())
         self.index = VectorStoreIndex(nodes, storage_context=storage_context)
         self.retriever = self.index.as_retriever(similarity_top_k=3)
@@ -56,3 +51,4 @@ class Copilot:
         client = OpenAI(api_key=st.session_state.openai_api_key)
         response = chat_completion_request(client, messages)
         return response.choices[0].message.content if hasattr(response, "choices") else str(response)
+
