@@ -1,67 +1,51 @@
 import streamlit as st
 from copilot import Copilot
-import os
-from streamlit_markdown import st_streaming_markdown
-from streamlit_markdown import st_markdown
 
+# --- Page Configuration ---
+st.set_page_config(page_title="CBS Orientation Bot", layout="centered")
 
-### set openai key, first check if it is in environment variable, if not, check if it is in streamlit secrets, if not, raise error
+# --- Session State Initialization ---
+@st.cache_resource
+def load_copilot():
+    return Copilot()
 
+if "chat_copilot" not in st.session_state:
+    st.session_state.chat_copilot = load_copilot()
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-st.title("Chat with CBS Orientation Bot.")
-# st.write(
-#     "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys). "
-# )
+# --- Title ---
+st.title("Chat with CBS Peer Advisor")
 
-openai_api_key = os.getenv("OPENAI_API_KEY")
-
-if not openai_api_key: ### get openai key from user input
-    openai_api_key = st.text_input("Please enter your OpenAI API Key", type="password")
-
+# --- OpenAI API Key Input ---
+openai_api_key = st.text_input("Please enter your OpenAI API Key", type="password")
 if not openai_api_key:
-    st.info("Please add your OpenAI API key to continue.", icon="🗝️")
-else:
-    if "messages" not in st.session_state.keys():  # Initialize the chat messages history
-        st.session_state.messages = [
-            {"role": "assistant", "content": "I am Business Analytics Add-in Copilot, your personal assistant. You can ask me about Business Analytics Add-in. The Documentation for Add-in can be downloaded [here](https://cbs-ba-addin.com/#docs)."}
-        ]
+    st.info("🔑 Please add your OpenAI API key to continue.")
+    st.stop()
 
-    @st.cache_resource
-    def load_copilot():
-        return Copilot()
+# --- Assistant Welcome Message ---
+if len(st.session_state.messages) == 0:
+    st.chat_message("assistant").markdown(
+        "Hi! I’m your **Peer Advisor** 🤝\n\nAsk me anything about navigating CBS life — from academics to fun things around campus!"
+    )
 
+# --- Chat Interface Loop ---
+for msg in st.session_state.messages:
+    st.chat_message(msg["role"]).write(msg["content"])
 
+user_input = st.chat_input("What would you like to ask?")
+if user_input:
+    # Show user message
+    st.chat_message("user").write(user_input)
+    st.session_state.messages.append({"role": "user", "content": user_input})
 
-    if "chat_copilot" not in st.session_state.keys():  # Initialize the chat engine
-        st.session_state.chat_copilot = load_copilot()
+    # Get response from the chatbot
+    with st.chat_message("assistant"):
+        response = st.session_state.chat_copilot.get_response(
+            message_history=st.session_state.messages[:-1],
+            user_input=user_input
+        )
+        st.write(response)
 
-    if prompt := st.chat_input(
-        "Ask a question"
-    ):  # Prompt for user input and save to chat history
-        st.session_state.messages.append({"role": "user", "content": prompt})
-
-    for message in st.session_state.messages:  # Write message history to UI
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
-
-    # If last message is not from assistant, generate a new response
-    if st.session_state.messages[-1]["role"] != "assistant":
-        with st.chat_message("assistant"):
-
-            retrived_info, answer = st.session_state.chat_copilot.ask(prompt, messages=st.session_state.messages[:-1], openai_key=openai_api_key)
-            ### answer can be a generator or a string
-
-            #print(retrived_info)
-            if isinstance(answer, str):
-                st.write(answer)
-            else:
-                ### write stream answer to UI
-                def generate():
-                    for chunk in answer:
-                        content = chunk.choices[0].delta.content
-                        if content:
-                            yield content
-                #answer = st_streaming_markdown(generate, key="token_stream", theme_color="null")
-                answer = st.write_stream(generate())
-
-            st.session_state.messages.append({"role": "assistant", "content": answer})
+    # Store assistant response
+    st.session_state.messages.append({"role": "assistant", "content": response})
