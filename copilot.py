@@ -9,6 +9,7 @@ from llama_index.core.storage.storage_context import StorageContext
 from llama_index.core.vector_stores import SimpleVectorStore
 from tenacity import retry, wait_random_exponential, stop_after_attempt
 
+# Retry logic for OpenAI calls
 @retry(wait=wait_random_exponential(multiplier=1, max=40), stop=stop_after_attempt(5))
 def chat_completion_request(client, messages, model="gpt-4o", **kwargs):
     try:
@@ -31,25 +32,23 @@ class Copilot:
         if not os.path.exists(pdf_path):
             raise FileNotFoundError(f"The file {pdf_path} does not exist")
 
-        # Configure embedding and LLM
+        # Set up embedding and LLM
         Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
         Settings.llm = LlamaOpenAI(model="gpt-4o")
 
-        # Load document
+        # Load and split document
         documents = SimpleDirectoryReader(input_files=[pdf_path]).load_data()
-
-        # Token-based splitting (safe alternative to nltk)
         splitter = TokenTextSplitter(chunk_size=512, chunk_overlap=50)
         nodes = splitter.get_nodes_from_documents(documents)
 
-        # Indexing
+        # Build vector index
         storage_context = StorageContext.from_defaults(vector_store=SimpleVectorStore())
         self.index = VectorStoreIndex(nodes, storage_context=storage_context)
         self.retriever = self.index.as_retriever(similarity_top_k=3)
 
     def get_response(self, message_history, user_input):
         """
-        Generate a chat response using retrieved content from the PDF.
+        Retrieve context from the PDF and generate a response using OpenAI.
         """
         retrieved_nodes = self.retriever.retrieve(user_input)
         context_str = "\n".join([node.text for node in retrieved_nodes])
