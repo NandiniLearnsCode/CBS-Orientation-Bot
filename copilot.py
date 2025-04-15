@@ -1,6 +1,6 @@
 from openai import OpenAI
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Settings
-from llama_index.llms.openai import OpenAI as LlamaOpenAI  # UPDATED
+from llama_index.llms.openai import OpenAI as LlamaOpenAI
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.storage.storage_context import StorageContext
@@ -23,7 +23,7 @@ def chat_completion_request(client, messages, model="gpt-4o", **kwargs):
         return e
 
 class Copilot:
-    def __init__(self, pdf_path="J-Term CBS Survival Guide.pdf"):
+    def __init__(self, pdf_path="data/J-Term CBS Survival Guide.pdf"):
         """
         Initialize the chatbot by loading a PDF, parsing its content, embedding it,
         and preparing a vector index for retrieval.
@@ -34,7 +34,7 @@ class Copilot:
 
         # Set up the embedding model and LLM
         Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
-        Settings.llm = LlamaOpenAI(model="gpt-4o")  # UPDATED
+        Settings.llm = LlamaOpenAI(model="gpt-4o")
 
         # Read and parse the document
         documents = SimpleDirectoryReader(input_files=[pdf_path]).load_data()
@@ -61,4 +61,5 @@ class Copilot:
 
         response = chat_completion_request(OpenAI(), messages)
         return response.choices[0].message.content if hasattr(response, "choices") else str(response)
+
 
