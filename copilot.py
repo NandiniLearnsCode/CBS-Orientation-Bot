@@ -1,51 +1,64 @@
-# copilot.py
-
-from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, ServiceContext
+from openai import OpenAI
+from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Settings
+from llama_index.llms.openai import OpenAI as LlamaOpenAI  # UPDATED
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.llms import OpenAI
-from llama_index.core.memory import ChatMemoryBuffer
-from llama_index.core.chat_engine import ContextChatEngine
-
+from llama_index.core.node_parser import SentenceSplitter
+from llama_index.core.storage.storage_context import StorageContext
+from llama_index.core.vector_stores import SimpleVectorStore
+from tenacity import retry, wait_random_exponential, stop_after_attempt
 import os
 
+@retry(wait=wait_random_exponential(multiplier=1, max=40), stop=stop_after_attempt(5))
+def chat_completion_request(client, messages, model="gpt-4o", **kwargs):
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            **kwargs
+        )
+        return response
+    except Exception as e:
+        print("Unable to generate ChatCompletion response")
+        print(f"Exception: {e}")
+        return e
+
 class Copilot:
-    def __init__(self, data_dir="data", model="gpt-4o"):
-        self.data_dir = data_dir
-        self.model = model
-        self.chat_engine = self._load_engine()
+    def __init__(self, pdf_path="J-Term CBS Survival Guide.pdf"):
+        """
+        Initialize the chatbot by loading a PDF, parsing its content, embedding it,
+        and preparing a vector index for retrieval.
+        """
+        # Check if the file exists
+        if not os.path.exists(pdf_path):
+            raise FileNotFoundError(f"The file {pdf_path} does not exist")
 
-    def _load_engine(self):
-        # Load documents from the data directory
-        documents = SimpleDirectoryReader(self.data_dir).load_data()
+        # Set up the embedding model and LLM
+        Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
+        Settings.llm = LlamaOpenAI(model="gpt-4o")  # UPDATED
 
-        # Create the embedding model
-        embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
+        # Read and parse the document
+        documents = SimpleDirectoryReader(input_files=[pdf_path]).load_data()
+        nodes = SentenceSplitter().get_nodes_from_documents(documents)
 
-        # Set up the service context
-        service_context = ServiceContext.from_defaults(
-            llm=OpenAI(model=self.model),
-            embed_model=embed_model
-        )
+        # Create and persist the vector index
+        storage_context = StorageContext.from_defaults(vector_store=SimpleVectorStore())
+        self.index = VectorStoreIndex(nodes, storage_context=storage_context)
 
-        # Create index and retriever
-        index = VectorStoreIndex.from_documents(documents, service_context=service_context)
-        retriever = index.as_retriever(similarity_top_k=5)
+        # Set up the retriever
+        self.retriever = self.index.as_retriever(similarity_top_k=3)
 
-        # Optional memory for conversation context
-        memory = ChatMemoryBuffer.from_defaults(token_limit=3000)
+    def get_response(self, message_history, user_input):
+        """
+        Get a model-generated response using context from the indexed document.
+        """
+        retrieved_nodes = self.retriever.retrieve(user_input)
+        context_str = "\n".join([node.text for node in retrieved_nodes])
 
-        # Set up the chat engine
-        chat_engine = ContextChatEngine.from_defaults(
-            retriever=retriever,
-            memory=memory,
-            system_prompt="You are an AI-powered Columbia Orientation Bot. Be helpful, friendly, and precise."
-        )
+        messages = message_history + [
+            {"role": "system", "content": f"Use the following context to answer the question:\n\n{context_str}"},
+            {"role": "user", "content": user_input}
+        ]
 
-        return chat_engine
-
-    def chat(self, user_input, chat_history):
-        response = self.chat_engine.chat(user_input)
-        chat_history.append(("user", user_input))
-        chat_history.append(("assistant", response.response))
-        return response.response, chat_history
+        response = chat_completion_request(OpenAI(), messages)
+        return response.choices[0].message.content if hasattr(response, "choices") else str(response)
 
