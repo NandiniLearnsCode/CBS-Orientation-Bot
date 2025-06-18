@@ -10,6 +10,13 @@ from llama_index.core.node_parser import TokenTextSplitter
 from llama_index.core.storage.storage_context import StorageContext
 from llama_index.core.vector_stores import SimpleVectorStore
 from tenacity import retry, wait_random_exponential, stop_after_attempt
+import nltk
+
+# Download NLTK data to a writable directory (for Streamlit Cloud compatibility)
+nltk_data_dir = os.path.join(os.path.expanduser("~"), "nltk_data")
+os.makedirs(nltk_data_dir, exist_ok=True)
+nltk.data.path.append(nltk_data_dir)
+nltk.download("stopwords", download_dir=nltk_data_dir)
 
 # Retry logic for OpenAI calls
 @retry(wait=wait_random_exponential(multiplier=1, max=40), stop=stop_after_attempt(5))
