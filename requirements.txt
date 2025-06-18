@@ -1,6 +1,12 @@
-streamlit==1.33.0
-openai==1.14.2
-llama-index==0.10.24
+streamlit==1.42.2
+openai==1.64.0
+llama-index==0.12.20
+llama-index-llms-openai==0.3.20
+llama-index-embeddings-huggingface==0.5.2
+llama-index-core==0.12.20
+nltk==3.9.1
+pypdf==5.3.0
+streamlit-markdown==1.1.0
 tenacity==8.2.3
-transformers==4.39.3
-torch>=2.0.0
+beautifulsoup4==4.12.3
+requests==2.32.3

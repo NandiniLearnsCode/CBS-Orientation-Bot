@@ -27,10 +27,34 @@ if "chat_copilot" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# --- Show data sources info ---
+with st.sidebar:
+    st.header("📚 Data Sources")
+    try:
+        sources_info = st.session_state.chat_copilot.get_data_sources_info()
+        st.write(f"**Total Sources:** {sources_info['total_sources']}")
+        
+        st.write("**PDF Files:**")
+        for pdf in sources_info['pdf_files']:
+            st.write(f"• {pdf}")
+        
+        st.write("**Website:**")
+        st.write(f"• {sources_info['website']}")
+        
+        st.write("---")
+        st.write("💡 **Tip:** The bot searches through all these sources to find relevant information for your questions!")
+        
+    except Exception as e:
+        st.error(f"Error loading data sources info: {e}")
+
 # --- Assistant welcome message ---
 if len(st.session_state.messages) == 0:
     st.chat_message("assistant").markdown(
-        "Hi! I’m your **Peer Advisor** 🤝\n\nAsk me anything about navigating CBS life — from academics to fun things around campus!"
+        "Hi! I'm your **Peer Advisor** 🤝\n\n"
+        "I can help you with questions about Columbia Business School using information from:\n"
+        "• Multiple PDF documents in the data folder\n"
+        "• The CBS Office of Student Affairs website\n\n"
+        "Ask me anything about navigating CBS life — from academics to campus resources!"
     )
 
 # --- Chat history loop ---
@@ -44,10 +68,11 @@ if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
 
     with st.chat_message("assistant"):
-        response = st.session_state.chat_copilot.get_response(
-            message_history=st.session_state.messages[:-1],
-            user_input=user_input
-        )
+        with st.spinner("Searching through CBS resources..."):
+            response = st.session_state.chat_copilot.get_response(
+                message_history=st.session_state.messages[:-1],
+                user_input=user_input
+            )
         st.write(response)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
