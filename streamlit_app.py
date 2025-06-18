@@ -1,4 +1,5 @@
 import streamlit as st
+import os
 from copilot import Copilot
 
 # --- Page Configuration ---
@@ -8,11 +9,21 @@ st.set_page_config(page_title="CBS Peer Advisor", layout="centered")
 st.title("Chat with CBS Peer Advisor")
 
 # --- OpenAI API Key Input ---
-openai_api_key = st.text_input("Please enter your OpenAI API Key", type="password")
+# Check if API key is set in environment variables or Streamlit secrets
+default_api_key = os.getenv('OPENAI_API_KEY', '') or st.secrets.get('OPENAI_API_KEY', '')
 
-if not openai_api_key:
-    st.info("🔑 Please add your OpenAI API key to continue.")
-    st.stop()
+if default_api_key:
+    # If API key is in environment or secrets, use it automatically
+    openai_api_key = default_api_key
+    st.success("✅ API key loaded automatically")
+else:
+    # Otherwise, ask user to input it
+    openai_api_key = st.text_input("Please enter your OpenAI API Key", type="password")
+    
+    if not openai_api_key:
+        st.info("🔑 Please add your OpenAI API key to continue.")
+        st.info("💡 **For friends:** Ask the developer for the shared API key!")
+        st.stop()
 
 # Store the API key for use in copilot.py
 st.session_state.openai_api_key = openai_api_key
