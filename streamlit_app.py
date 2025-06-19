@@ -1,5 +1,8 @@
-import streamlit as st
 import os
+import nltk
+nltk_data_dir = os.path.join(os.path.dirname(__file__), "nltk_data")
+nltk.data.path.insert(0, nltk_data_dir)
+import streamlit as st
 from copilot import Copilot
 
 # --- Page Configuration ---
